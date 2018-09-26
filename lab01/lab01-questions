@@ -1,0 +1,16 @@
+1. Which machine did you choose?
+    I installed ubuntu 18.04 on my personal computer
+
+2. Which manual page did you read? Did you learn anything useful?
+    I read the “intro 1” page. It mainly helped me review most of the commands. Commands like “cat” and “grep” are ones I use, but I never learned exactly their definitions were until now.
+
+3. Which editor did you choose? Why? (Some people feel very strongly about
+their editors. . . )
+    I am using Vim because I feel more comfortable about using Vim than Emacs.
+
+4. Please include a copy of your program in this submission. Did you encounter
+any problems while developing it? If so, what were they and how did you solve
+them?
+    Program wise, I only ran into syntax errors because I need to get familiar
+with vim. I solved them by just double checking my code. I had way more trouble getting
+ubuntu set up.
