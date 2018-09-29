@@ -1,0 +1,79 @@
+#!/opt/python3.6/bin/python3
+
+import difflib
+import glob
+import subprocess
+import sys
+
+from os import path
+
+CLASS_DIR = '/home/ngonella/public/csc-357/'
+
+LOOKING_FOR_DETAB = '''
+---------------------------------------------------
+Looking for detab.c (the expected source filename).
+---------------------------------------------------
+'''
+
+NO_C_SRC = '''
+No C source files found.  Remember, C source files
+should have a .c extension (not .C or .cc which would
+indicate C++.
+'''
+
+LINE_CHECK = '''
+---------------------------------------------------------------------
+Checking for long lines (no program should have any lines > 80 chars)
+---------------------------------------------------------------------
+'''
+
+print(LOOKING_FOR_DETAB)
+
+if not path.isfile('detab.c'):
+    print(NO_C_SRC)
+    sys.exit(1)
+
+print(LINE_CHECK)
+
+p = subprocess.run('/home/pn-cs357/bin/longlines.pl detab.c'.split())
+
+if p.returncode != 0:
+    print("Lines too long")
+    sys.exit(1)
+
+BUILDING = '''
+--------------------------------
+Building the application (detab)
+--------------------------------
+'''
+
+print(BUILDING)
+
+p = subprocess.run('clang -Wall -pedantic -o detab detab.c'.split())
+
+if p.returncode != 0:
+    print("Could not compile")
+    sys.exit(1)
+
+TESTING = '''
+-------------------------------
+Testing the application (detab)
+-------------------------------
+'''
+
+print(TESTING)
+
+for f in sorted(glob.glob(path.join(CLASS_DIR, 'asgn1/public_tests/*'))):
+    print(path.basename(f), end='')
+    print('.' * (72 - len(path.basename(f))), end='')
+    with open(path.join(f, 'input'), 'rb') as input:
+        with open(path.join(f, 'stdout'), 'rb') as output:
+            p = subprocess.run('./detab', stdin=input, stdout=subprocess.PIPE)
+            if p.returncode != 0:
+                print("Detab exited with bad return code")
+                break
+
+            if p.stdout != output.read():
+                print("Detab output differed from expected")
+                break
+    print("OK")
