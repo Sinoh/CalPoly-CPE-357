@@ -8,7 +8,7 @@
 
 struct DataItem {
     int count;
-    char key;
+    char* key;
 };
 
 /*
@@ -51,7 +51,7 @@ struct DataItem *search(char* key) {
     // move in array until an empty
     while(hashArray[hashIndex] != NULL) {
         
-        if (hashArray[hashIndex]->key == hashIndex){
+        if (hashArray[hashIndex]->key == key){
             return hashArray[hashIndex];
         }
 
@@ -97,11 +97,13 @@ void insert(char* key, int count) {
     int hashNumber = hashCode(key);
     int hashIndex = hashNumber % SIZE;
 
+    item->key = malloc(strlen(key)+1);
+
     item->count = count;
-    item->key = hashNumber;
+    item->key = strdup(key);
 
     // move in array until empty or deleted cell
-    while (hashArray[hashIndex] != NULL && hashArray[hashIndex]->key != -1) {
+    while (hashArray[hashIndex] != NULL && hashArray[hashIndex]->key != "foo") {
         // got tonext cell
         ++hashIndex;
 
@@ -148,7 +150,7 @@ struct DataItem* delete(char* key) {
     // move in array until an empty
     while(hashArray[hashIndex] != NULL) {
     
-        if(hashArray[hashIndex]-> key == *key) {
+        if(hashArray[hashIndex]-> key == key) {
             struct DataItem* temp = hashArray[hashIndex];
 
             // assign a summy item at delted postion
@@ -200,7 +202,7 @@ void display() {
    for(i = 0; i<SIZE; i++) {
 	
       if(hashArray[i] != NULL)
-         printf(" (%d,%d)",hashArray[i]->key,hashArray[i]->count);
+         printf(" (%s,%d)",hashArray[i]->key,hashArray[i]->count);
       else
          printf(" ~~ ");
    }
@@ -211,7 +213,7 @@ void display() {
 int main() {
    dummyItem = (struct DataItem*) malloc(sizeof(struct DataItem));
    dummyItem->count = -1;  
-   dummyItem->key = -1; 
+   dummyItem->key = "foo"; 
 
    insert("this", 20);
   // insert("is", 70);
