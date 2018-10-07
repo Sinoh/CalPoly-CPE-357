@@ -1,0 +1,115 @@
+1. 
+(Warm up) Please provide declarations for the following data:
+    • a pointer cp that points to a char.
+    • a pointer ap that points to an array of chars.
+    • a pointer pp that points to a pointer that points to an int.
+
+int main() {
+    char ch = 'x';
+    char cha[3] = {'x', 'y', 'z'};
+    int z = 1;
+    
+    char *cp = &ch
+    char *ap = cha
+    int *pt = &z;
+    int **pp = &pt;
+
+    return 0
+}
+
+2.
+Is it possible in C to declare and initialize a pointer that points to itself?
+Why or why not? (And, if so, how, of course.)
+
+    It is possible to delcare and initialize a pointer that points to itself.
+    You can do:
+
+    int *pt = (int*)&pt;
+
+    In this case, the pointer may be pointing to itself, but instead of what pt is
+    originally pointing to, pt will be overwritten with the location of the memmory adress of pt
+    itself.
+    
+3.
+What is the fundamental problem with the following code fragment intended
+to print out a string:
+
+    char s[] = "Hello, world!\n";
+    char *p;
+
+    for(p = s; p != ’\0’; p++) {
+        putchar(*p);
+    }
+
+    The fundamental problem with this fragment is that it is using p instead of the
+    pointer *p.
+
+    The for loop is written incorrectly. The "p"'s need to be pointers so, "*p" and
+    *P must be pointing  to an adress.
+
+    If the code is to ran as is, errors will appear when compiling.
+
+4.
+C programmers often say “arrays are the same as pointers”. In one sense this
+is true. In another, more correct, sense they are fundamentally different.
+    • In what ways is this statement correct?
+        
+        This is correct becuase both pointers and array points to a memory
+        adress continaing the data you want.
+
+    • How is it in error? That is, what makes a pointer fundamentally
+      different from an array?
+        
+        They are different because a pointer can point to any specific memory
+        address. An array always points to the first memory address allocated
+        to it. If arr[2] is used, it is technically *(array + 2).
+
+5.
+List the three flaws you discover in part 1 of the laboratory exercise.
+    
+    One flaw is on line 86. "while ( isspace(s)). This will check if "s" is
+    a space. However, s will always be the rest of the string after the first
+    word. It needs to be derefrenced, *s.
+    
+    Another problem I found was on line 84. After "s" reaches the end of the
+    line, "NULL != (s = fegets(buffer,SIZE,stdin)" does not break. I don't know
+    if this is only happening in the gdb since it keeps requesting a new  input after
+    the program puts the words from the previous input into a list.
+
+    Another flaw is on line 110 and 126. "printf("%s\n",reverse(back->word));". The
+    function reverse requires both a char and an int to be passed. If not, len
+    would be just some trash number that wont correspond to the length of the
+    word.
+
+    One for flaw is during the backwards print, it does not print backwards.
+
+6.
+Exercise 1.3 from Stevens APUE
+    
+    In Section 1.7, the argument to perror is defined with the ISO C attribute const ,
+    whereas the integer argument to strerror isn't defined with this attribute. Why?
+    
+    perror requires the attribute const becuase it prints a string that does
+    not need to be modified. Strerror, instead, returns a pointer that points to a string,
+    so it does not need the attribute const
+
+7.
+Exercise 1.5 from Stevens APUE
+
+    If the calendar time is stored as a signed 32-bit integer, in what year will it overflow?
+    What ways can be used to extend the overflow point? Are they compatible with existing
+    applications?
+
+    If the calendar ti,e is stored as a signed 32-but integer, it will overflow
+    in the year of 2038.
+
+    One option would be to use an unsigned 32-bit integer to extend the
+    overflow. However any applications that required the signed 32-bit integer
+    will have compaitibility issues.
+
+8.
+A subcase of Ex. 2.2 from Stevens: On unix4, what is the actual data
+type of a size_t (the type of malloc()’s argument)? In what header file is
+it defined?
+
+    The acutal data type of size_t is an unsigned intege.
