@@ -50,10 +50,8 @@ struct DataItem *search(char* key) {
 
     // move in array until an empty
     while(hashArray[hashIndex] != NULL) {
-       
-       // compares the key within the struct to the key passed, if the same
-       // return 
-        if (!strcmp(hashArray[hashIndex]->key, key)) {
+        
+        if (hashArray[hashIndex]->key == key){
             return hashArray[hashIndex];
         }
 
@@ -105,7 +103,7 @@ void insert(char* key, int count) {
     item->key = strdup(key);
 
     // move in array until empty or deleted cell
-    while (hashArray[hashIndex] != NULL && hashArray[hashIndex]->key != "") {
+    while (hashArray[hashIndex] != NULL && hashArray[hashIndex]->key != "foo") {
         // got tonext cell
         ++hashIndex;
 
@@ -216,7 +214,7 @@ void display() {
 int main() {
    dummyItem = (struct DataItem*) malloc(sizeof(struct DataItem));
    dummyItem->count = -1;  
-   dummyItem->key = ""; 
+   dummyItem->key = "foo"; 
 
    insert("this", 20);
    insert("is", 70);
@@ -238,7 +236,7 @@ int main() {
    }
 
    delete("sleep");
-   item = search("sleep");
+   item = search("acutally");
 
    if(item != NULL) {
       printf("Element found: %d\n", item->count);
