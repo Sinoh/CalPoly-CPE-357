@@ -45,8 +45,7 @@ int hashCode(int key) {
 
 struct DataItem *search(char* key) {
     // get the hash
-    int hashNumber = hashCode(key);
-    int hashIndex = hashNumber % SIZE;
+    int hashIndex = hashCode(key) % SIZE;
 
     // move in array until an empty
     while(hashArray[hashIndex] != NULL) {
@@ -96,8 +95,7 @@ void insert(char* key, int count) {
     }
     
     // get hash
-    int hashNumber = hashCode(key);
-    int hashIndex = hashNumber % SIZE;
+    int hashIndex = hashCode(key) % SIZE;
 
     item->key = malloc(strlen(key)+1);
 
@@ -105,7 +103,7 @@ void insert(char* key, int count) {
     item->key = strdup(key);
 
     // move in array until empty or deleted cell
-    while (hashArray[hashIndex] != NULL && hashArray[hashIndex]->key != "") {
+    while (hashArray[hashIndex] != NULL) {
         // got tonext cell
         ++hashIndex;
 
@@ -147,17 +145,16 @@ void insert(int key,int data) {
 struct DataItem* delete(char* key) {
 
     // get the hash
-    int hashIndex = hashCode(key);
+    int hashIndex = hashCode(key) % SIZE;
 
     // move in array until an empty
     while(hashArray[hashIndex] != NULL) {
     
-        if(hashArray[hashIndex]-> key == key) {
+        if(!strcmp(hashArray[hashIndex]->key, key)) {
             struct DataItem* temp = hashArray[hashIndex];
 
             // assign a summy item at delted postion
-            hashArray[hashIndex] = dummyItem;
-            printf("Deleted");
+            hashArray[hashIndex] = NULL;
             return temp;
         }
 
@@ -213,10 +210,7 @@ void display() {
    printf("\n");
 }
 
-int main() {
-   dummyItem = (struct DataItem*) malloc(sizeof(struct DataItem));
-   dummyItem->count = -1;  
-   dummyItem->key = ""; 
+int main() { 
 
    insert("this", 20);
    insert("is", 70);
@@ -238,6 +232,7 @@ int main() {
    }
 
    delete("sleep");
+   display();
    item = search("sleep");
 
    if(item != NULL) {
@@ -245,6 +240,9 @@ int main() {
    } else {
       printf("Element not found\n");
    }
+
+   insert("sleep", 97);
+   display();
 }
 
 
