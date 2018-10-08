@@ -4,7 +4,6 @@
 #include <stdbool.h>
 
 #define SIZE 20
-#define half 0.5
 
 struct DataItem {
     int count;
@@ -41,7 +40,36 @@ int hashCode(int key) {
     return key % SIZE;
 }
 */
- 
+
+/*
+struct DataItem* resize(struct DataItem hashArray, int arraySize) {
+    int i;
+    int newSize = arraySize * 2;
+    struct DataItem* temp[newSize];
+    
+
+    for (i = 0; i < arraySize; i ++) {
+        *item = hashArray;
+        
+
+        if (item != NULL) {
+            int hashIndex = hashCode(item->key) % SIZE;
+
+            while (temp[hashIndex] != NULL) {
+
+                ++hashIndex;
+
+                hashIndex %= newSize;
+            }
+
+        temp[hashIndex] = item;
+        }
+    }
+    return *temp;
+
+}
+
+*/
 
 struct DataItem *search(char* key) {
     // get the hash
@@ -88,7 +116,10 @@ struct DataItem *search(int key) {
 
 */
 
-void insert(char* key, int count) {
+void insert(char* key, int count, int elementsCount) {
+    int i;
+
+
     struct DataItem *item = (struct DataItem*) malloc(sizeof(struct DataItem));
     if (item == NULL) {
         perror("Malloc Failed");
@@ -112,11 +143,31 @@ void insert(char* key, int count) {
     }
 
     hashArray[hashIndex] = item;
-/*
-    if ((sizeof(DataItem) / sizeof(int)) > half) {
+    elementsCount++;
+
+    if (elementsCount > sizeof(hashArray) / 2) {
+       // hashArray = resize(hashArray, sizeof(hashArray) * 2);
         
+        struct DataItem* temp[sizeof(hashArray) * 2];
+
+        for (i = 0; i < sizeof(hashArray); i ++) {
+            item = hashArray[i];
+            
+            if (item != NULL) {
+
+                int hashIndex = hashCode(item->key) % sizeof(temp);
+                
+                while (temp[hashIndex] != NULL) {
+                    ++hashIndex;
+                    hashIndex %= sizeof(temp);
+                }
+            }
+            temp[hashIndex] = item;
+        }
+        hashArray = struct DataItem* hashArray[sizeof(temp)];
+        hashArray = temp;
     }
-*/
+
 }
 
 /*
@@ -142,7 +193,7 @@ void insert(int key,int data) {
 }
 */
 
-struct DataItem* delete(char* key) {
+struct DataItem* delete(char* key, int elementsCount) {
 
     // get the hash
     int hashIndex = hashCode(key) % SIZE;
@@ -155,6 +206,7 @@ struct DataItem* delete(char* key) {
 
             // assign a summy item at delted postion
             hashArray[hashIndex] = NULL;
+            elementsCount --;
             return temp;
         }
 
@@ -210,17 +262,18 @@ void display() {
    printf("\n");
 }
 
-int main() { 
+int main() {
+    int elementsCount = 0;
 
-   insert("this", 20);
-   insert("is", 70);
-   insert("very", 80);
-   insert("stupid", 25);
-   insert("hello", 44);
-   insert("world", 32);
-   insert("i", 11);
-   insert("I", 78);
-   insert("sleep", 97);
+   insert("this", 20, elementsCount);
+   insert("is", 70, elementsCount);
+   insert("very", 80,elementsCount);
+   insert("stupid", 25,elementsCount);
+   insert("hello", 44, elementsCount);
+   insert("world", 32, elementsCount);
+   insert("i", 11, elementsCount);
+   insert("I", 78, elementsCount);
+   insert("sleep", 97, elementsCount);
 
    display();
    item = search("sleep");
@@ -231,7 +284,7 @@ int main() {
       printf("Element not found\n");
    }
 
-   delete("sleep");
+   delete("sleep", elementsCount);
    display();
    item = search("sleep");
 
@@ -241,8 +294,11 @@ int main() {
       printf("Element not found\n");
    }
 
-   insert("sleep", 97);
+   insert("sleep", 97, elementsCount);
    display();
+   insert("we", 10, elementsCount);
+   display();
+   insert("are", 20, elementsCount);
 }
 
 
