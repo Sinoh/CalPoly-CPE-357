@@ -2,24 +2,18 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include "hash.h"
 
-#define SIZE 20
+struct HashTable{
+    int elements;
+    int size;
+    struct Bucket *item;
+};
 
-struct DataItem {
+struct Bucket{
     int count;
-    char* key;
+    char *key;
 };
-
-/*
-struct DataItem {
-   int data;   
-   int key;
-};
-*/
-
-struct DataItem* hashArray[SIZE]; 
-struct DataItem* dummyItem;
-struct DataItem* item;
 
 
 int hashCode(char* key) {
@@ -35,304 +29,155 @@ int hashCode(char* key) {
 }
 
 
-/*
-int hashCode(int key) {
-    return key % SIZE;
-}
-*/
-
-/*
-struct DataItem* resize(struct DataItem hashArray, int arraySize) {
+struct HashTable *resize(struct HashTable* oldTable) {
     int i;
-    int newSize = arraySize * 2;
-    struct DataItem* temp[newSize];
-    
 
-    for (i = 0; i < arraySize; i ++) {
-        *item = hashArray;
-        
+   struct HashTable *newTable = (struct HashTable*) malloc(sizeof(struct HashTable));
+    struct Bucket* newBuckets = ((struct Bucket*) malloc(sizeof(struct Bucket) * oldTable->size * 2));
+    newTable->item = newBuckets;
+    newTable->elements = oldTable->elements;
+    newTable->size = oldTable->size * 2;
 
-        if (item != NULL) {
-            int hashIndex = hashCode(item->key) % SIZE;
+   if (newTable == NULL) {
+       perror("Malloc FAILED");
+   }
 
-            while (temp[hashIndex] != NULL) {
-
-                ++hashIndex;
-
-                hashIndex %= newSize;
-            }
-
-        temp[hashIndex] = item;
+    for (i = 0; i < oldTable->size; i++) {
+        if (oldTable->item[i].key != NULL) {
+            newTable = insert(newTable, oldTable->item[i].key);
+            newTable->elements--;   
         }
-    }
-    return *temp;
-
+   }
+   return newTable;
 }
 
-*/
 
-struct DataItem *search(char* key) {
+int search(struct HashTable* hashArray, char* key) {
     // get the hash
-    int hashIndex = hashCode(key) % SIZE;
+    int item = hashCode(key) % hashArray->size;
+    int hashIndex = item;
 
     // move in array until an empty
-    while(hashArray[hashIndex] != NULL) {
+    while(hashArray->item[hashIndex].key != NULL) {
        
        // compares the key within the struct to the key passed, if the same
        // return 
-        if (!strcmp(hashArray[hashIndex]->key, key)) {
-            return hashArray[hashIndex];
+        if (!strcmp(hashArray->item[hashIndex].key, key)) {
+            return hashIndex;
         }
 
         // else go to next cell
-        ++hashIndex;
+        hashIndex++;
 
         //wrap around the table
-        hashIndex %= SIZE;
+        hashIndex %= hashArray->size;
     }
-    return NULL;
+    return 0;
 }
 
-/*
-struct DataItem *search(int key) {
-   //get the hash 
-   int hashIndex = hashCode(key);  
-	
-   //move in array until an empty 
-   while(hashArray[hashIndex] != NULL) {
-	
-      if(hashArray[hashIndex]->key == key)
-         return hashArray[hashIndex]; 
-			
-      //go to next cell
-      ++hashIndex;
-		
-      //wrap around the table
-      hashIndex %= SIZE;
-   }        
-	
-   return NULL;        
-}
-
-*/
-
-void insert(char* key, int count, int elementsCount) {
-    int i;
 
 
-    struct DataItem *item = (struct DataItem*) malloc(sizeof(struct DataItem));
-    if (item == NULL) {
-        perror("Malloc Failed");
-    }
-    
+struct HashTable* insert(struct HashTable* hashArray, char* key) {
     // get hash
-    int hashIndex = hashCode(key) % SIZE;
-
-    item->key = malloc(strlen(key)+1);
-
-    item->count = count;
-    item->key = strdup(key);
-
-    // move in array until empty or deleted cell
-    while (hashArray[hashIndex] != NULL) {
-        // got tonext cell
-        ++hashIndex;
-
-        //wrap around the table
-        hashIndex %= SIZE;
-    }
-
-    hashArray[hashIndex] = item;
-    elementsCount++;
-
-    if (elementsCount > sizeof(hashArray) / 2) {
-       // hashArray = resize(hashArray, sizeof(hashArray) * 2);
-        
-        struct DataItem* temp[sizeof(hashArray) * 2];
-
-        for (i = 0; i < sizeof(hashArray); i ++) {
-            item = hashArray[i];
-            
-            if (item != NULL) {
-
-                int hashIndex = hashCode(item->key) % sizeof(temp);
-                
-                while (temp[hashIndex] != NULL) {
-                    ++hashIndex;
-                    hashIndex %= sizeof(temp);
-                }
-            }
-            temp[hashIndex] = item;
-        }
-        hashArray = struct DataItem* hashArray[sizeof(temp)];
-        hashArray = temp;
-    }
-
-}
-
-/*
-void insert(int key,int data) {
-
-   struct DataItem *item = (struct DataItem*) malloc(sizeof(struct DataItem));
-   item->data = data;  
-   item->key = key;
-
-   //get the hash 
-   int hashIndex = hashCode(key);
-
-   //move in array until an empty or deleted cell
-   while(hashArray[hashIndex] != NULL && hashArray[hashIndex]->key != -1) {
-      //go to next cell
-      ++hashIndex;
-		
-      //wrap around the table
-      hashIndex %= SIZE;
-   }
-	
-   hashArray[hashIndex] = item;
-}
-*/
-
-struct DataItem* delete(char* key, int elementsCount) {
-
-    // get the hash
-    int hashIndex = hashCode(key) % SIZE;
-
-    // move in array until an empty
-    while(hashArray[hashIndex] != NULL) {
+    int hashIndex = hashCode(key) % hashArray->size;
     
-        if(!strcmp(hashArray[hashIndex]->key, key)) {
-            struct DataItem* temp = hashArray[hashIndex];
+    if (hashArray->item[hashIndex].key == NULL) {
+    }
+    else {
+        while (hashArray->item[hashIndex].key != NULL) {
+            if (hashArray->item[hashIndex].key == key) {
+                hashArray->item[hashIndex].count++;
+            }
+            else {
+                hashIndex++;
+            }
+        }
+    }
 
-            // assign a summy item at delted postion
-            hashArray[hashIndex] = NULL;
-            elementsCount --;
+    hashArray->item[hashIndex].key = malloc(strlen(key)+1);
+    hashArray->item[hashIndex].key = strdup(key);
+    hashArray->elements++;
+
+
+    if (hashArray->elements > hashArray->size / 2) {
+        hashArray->item = resize(hashArray)->item;
+        hashArray->size = hashArray->size * 2;
+    } 
+
+    return hashArray;
+    
+}
+
+
+
+struct Bucket* delete(struct HashTable* hashArray, char* key) {
+
+    // get the has
+    int hashIndex = hashCode(key) % hashArray->size;
+    struct Bucket* temp = (struct Bucket*) malloc(sizeof(struct Bucket) * hashArray->size);
+    // move in array until an empty
+    while(hashArray->item[hashIndex].key != NULL) {
+    
+        if(!strcmp(hashArray->item[hashIndex].key, key)) {
+    
+            temp[hashIndex].key = hashArray->item[hashIndex].key;
+            temp[hashIndex].count = hashArray->item[hashIndex].count;
+            // assign a summy item at deleted postion
+            hashArray->item[hashIndex].key = NULL;
+            
+            hashArray->elements--;
             return temp;
         }
 
         // go to next cell
         ++hashIndex;
-
         //wrap around the table
-        hashIndex %= SIZE;
+        hashIndex %= hashArray->size;
     }
     
     return NULL;
 }
-/*
-struct DataItem* delete(struct DataItem* item) {
-   int key = item->key;
 
-   //get the hash 
-   int hashIndex = hashCode(key);
 
-   //move in array until an empty
-   while(hashArray[hashIndex] != NULL) {
-	
-      if(hashArray[hashIndex]->key == key) {
-         struct DataItem* temp = hashArray[hashIndex]; 
-			
-         //assign a dummy item at deleted position
-         hashArray[hashIndex] = dummyItem; 
-         return temp;
-      }
-		
-      //go to next cell
-      ++hashIndex;
-		
-      //wrap around the table
-      hashIndex %= SIZE;
-   }      
-	
-   return NULL;        
-}
-*/
-
-void display() {
-   int i = 0;
-	
-   for(i = 0; i<SIZE; i++) {
-	
-      if(hashArray[i] != NULL)
-         printf(" (%s,%d)",hashArray[i]->key,hashArray[i]->count);
+void display(struct HashTable* hashArray) {
+   int i;
+   
+   for(i = 0; i < hashArray->size; i++) {
+   
+      if(hashArray->item[i].key != NULL)
+         printf(" (%s,%d)",hashArray->item[i].key, hashArray->item[i].count);
       else
          printf(" ~~ ");
    }
-	
+   
    printf("\n");
 }
 
 int main() {
-    int elementsCount = 0;
+    /* Pointer to array */
+    struct HashTable* hashArray = ((struct HashTable*) malloc(sizeof(struct HashTable)));
+    struct Bucket* buckets = ((struct Bucket*) malloc(sizeof(struct Bucket) * 20));
+    hashArray->item = buckets;
+    hashArray->elements = 0;
+    hashArray->size = 20;
 
-   insert("this", 20, elementsCount);
-   insert("is", 70, elementsCount);
-   insert("very", 80,elementsCount);
-   insert("stupid", 25,elementsCount);
-   insert("hello", 44, elementsCount);
-   insert("world", 32, elementsCount);
-   insert("i", 11, elementsCount);
-   insert("I", 78, elementsCount);
-   insert("sleep", 97, elementsCount);
-
-   display();
-   item = search("sleep");
-
-   if(item != NULL) {
-      printf("Element found: %d\n", item->count);
-   } else {
-      printf("Element not found\n");
-   }
-
-   delete("sleep", elementsCount);
-   display();
-   item = search("sleep");
-
-   if(item != NULL) {
-      printf("Element found: %d\n", item->count);
-   } else {
-      printf("Element not found\n");
-   }
-
-   insert("sleep", 97, elementsCount);
-   display();
-   insert("we", 10, elementsCount);
-   display();
-   insert("are", 20, elementsCount);
+    hashArray = insert(hashArray, "this");
+    hashArray = insert(hashArray,"is");
+    hashArray = insert(hashArray,"very");
+    hashArray = insert(hashArray,"stupid");
+    hashArray = insert(hashArray,"hello");
+    hashArray = insert(hashArray,"world");
+    hashArray = insert(hashArray,"i");
+    hashArray = insert(hashArray,"I");
+    hashArray = insert(hashArray,"sleep");
+        
+   // display(hashArray);
+    delete(hashArray,"sleep");
+   // display(hashArray);
+    hashArray = insert(hashArray,"sleep");
+   // display(hashArray);
+    hashArray = insert(hashArray,"we");
+   // display(hashArray);
+    hashArray = insert(hashArray,"are");
+    display(hashArray);
 }
-
-
-/*
-int main() {
-   dummyItem = (struct DataItem*) malloc(sizeof(struct DataItem));
-   dummyItem->data = -1;  
-   dummyItem->key = -1; 
-
-   insert(1, 20);
-   insert(2, 70);
-   insert(42, 80);
-   insert(4, 25);
-   insert(12, 44);
-   insert(14, 32);
-   insert(17, 11);
-   insert(13, 78);
-   insert(37, 97);
-
-   display();
-   item = search(37);
-
-   if(item != NULL) {
-      printf("Element found: %d\n", item->data);
-   } else {
-      printf("Element not found\n");
-   }
-
-   delete(item);
-   item = search(37);
-
-   if(item != NULL) {
-      printf("Element found: %d\n", item->data);
-   } else {
-      printf("Element not found\n");
-   }
-}*/
