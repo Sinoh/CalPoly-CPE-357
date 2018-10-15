@@ -1,0 +1,18 @@
+Steps:
+   1.) Hash Table
+      - Rehashing Function
+
+   2.) Sorting
+      - Use quicksort
+      - return sorted hash table
+
+   3.) Main file
+      - File input (multiple if necessary)
+         ~ For loop for multiple files?
+      - Hash all the words in file(s)
+         ~Use fgetc to filter out white space and number
+      - Sort the table
+      - Output 10 (or N) words w/ correct format
+         ~ use a for loop for 10 or N
+
+   Use valgrind

@@ -1,12 +1,19 @@
 #ifndef HEADER_FILE
 #define HEADER_FILE
 
-struct DataItem {
-   int count;
-   char* key;
+struct HashTable{
+   int elements;
+   int size;
+   struct Bucket *item;
 };
 
-struct HashTable* insert(struct HashTable* hashArray, char *key);
+struct Bucket{
+   int count;
+   char *key;
+};
 
+int search(struct HashTable* hashArray, char* key);
+struct HashTable* insert(struct HashTable* hashArray, char* key);
+void display(struct HashTable* hashArray);
 
 #endif
