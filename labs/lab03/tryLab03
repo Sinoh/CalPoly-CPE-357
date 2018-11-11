@@ -1,0 +1,167 @@
+#!/bin/csh -f 
+
+set lib=/home/pn-cs357/lib/lab03/
+set logprog=/home/pn-cs357/bin/logit.lab03
+set longlines=/home/pn-cs357/bin/longlines.pl
+set timelimit=/home/pnico/bin/timelimit
+
+set testdir=~ngonella/public/csc-357/lab03/Tests/inputs
+set asgn=Lab04
+set exitstatus = 0
+onintr bail
+
+if ( $exitstatus == 0 ) then
+  echo ""
+  echo "------------------------"
+  echo "Looking for source files"
+  echo "------------------------"
+  echo ""
+
+  set nonomatch
+  set src = ( *.[ch] )
+  if ( "$src" != '*.[ch]' ) then
+
+    echo "Found: $src"
+  else
+    echo "***** No C source files found. " 
+    echo "***** Are you sure you're in the right directory?"
+    echo ""
+    set exitstatus = -1
+  endif
+
+endif
+
+if ( $exitstatus == 0 ) then
+  echo ""
+  echo "-----------------------"
+  echo "Looking for a Makefile"
+  echo "----------------------"
+  echo ""
+
+  if ( $exitstatus == 0 ) then
+    if ( -f Makefile ) then
+      echo "Found: Makefile"
+    else if ( -f makefile ) then 
+      echo "Found: makefile"
+    else 
+      echo ""
+      echo "***** No Makefile found."
+      echo ""
+      set exitstatus = -2
+    endif
+  endif
+endif
+
+if ( $exitstatus == 0 ) then
+  echo ""
+  echo "--------------------------------"
+  echo "Checking for long lines (no program should have any lines > 80 chars)"
+  echo "--------------------------------"
+  echo ""
+
+  if ( ! { $longlines $src } ) then
+     set exitstatus=-3
+  else
+     echo "Line length ok."
+  endif
+  echo ""
+endif
+
+if ( $exitstatus == 0 ) then
+  echo ""
+  echo "------------------------------------"
+  echo "Building the application:" \"make htable\"
+  echo "------------------------------------"
+  echo ""
+
+  set cmd = ( make htable )
+  echo "$cmd" 
+  if ( ! { $cmd  } ) then
+    echo ""
+    echo "Unable to compile htable."
+    set exitstatus = -4
+  endif
+endif
+
+if ( $exitstatus == 0 ) then
+  echo ""
+  echo "---------------"
+  echo "checking for htable"
+  echo "---------------"
+  echo ""
+
+  if ( ! -f htable ) then
+    echo "program htable not found"
+    set exitstatus = -5
+  endif
+endif
+
+set which = 0
+
+if ( $exitstatus == 0 ) then
+  echo ""
+  echo ""
+  echo "--------------------------------"
+  echo "Running the application "
+  echo "--------------------------------"
+  echo ""
+  echo ""
+
+  echo ""
+  echo "--------------------------------------------------------"
+  echo "Test Results:"
+  echo "   These are the results of trying your htable against"   
+  echo "several input files with different characteristics "     
+  echo "described by the filename.  The output of your program"
+  echo "is compared to a reference output using diff(1).  If they"
+  echo "differ, the test case is a failure."
+  echo ""
+  echo "  The testfiles are located in $testdir/."
+  echo ""
+  echo ""
+
+  set expdir=$testdir:h/outputs
+
+  set this  = 1
+   
+  foreach input ( $testdir/* ) 
+     echo -n "        "$input:t"..."               
+     set exp=$expdir/$input:t.expected
+     if ( ! -f $exp ) then
+	set exitstatus=-6
+	break
+     endif
+     $timelimit 10 ./htable $input > htable.output$$ ; 
+     if ( { ( diff -i htable.output$$ $exp > /dev/null ) } ) then 
+         echo "ok."                                
+     else                                                  
+         echo "FAILURE."                           
+         @ exitstatus++;
+	 @ which += $this
+     endif
+     @ this *= 2
+     rm -f htable.output$$;                     
+  end
+
+  echo ""
+  echo "--------------------------------------------------------"
+  echo ""
+endif
+
+if ( ! $exitstatus ) then
+  echo "Passed all tests."
+else
+  echo "FAILED."
+endif
+
+goto done
+
+bail:
+  echo "Interrupted."
+  set exitstatus=-7
+
+done:
+
+#echo $logprog  $exitstatus $which
+$logprog  $exitstatus $which
+exit $exitstatus
