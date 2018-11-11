@@ -1,0 +1,150 @@
+#!/bin/tcsh -f 
+
+
+set testonly=0
+
+if ( $?GRADINGMODE ) then
+  set testonly=1
+endif
+
+
+#set verbose
+set debug=0
+set logall=0
+
+set requireMakefile=1
+set prog=mytar
+set timeout=10
+
+set hostname=`hostname`
+set lib=/home/pn-cs357/lib/asgn4/
+set logprog=/home/pn-cs357/bin/logit.asgn4
+# add my bindir to the head of the path
+set path = ( /home/pnico/bin $path )
+
+set apptest=/home/ngonella/public/csc-357/asgn4/testMytar
+
+set longlines=longlines.pl
+
+set exitstatus = 0
+set whichones=""
+
+onintr bail
+
+if ( ! $testonly ) then
+  if ( $exitstatus == 0 ) then
+    echo ""
+    echo "------------------------"
+    echo "Looking for source files"
+    echo "------------------------"
+    echo ""
+    set nonomatch
+    if ( *.[ch] != '*.[ch]' ) then
+      set src = ( *.[ch] )
+      echo "Found: $src"
+    else
+      echo "***** No C source files found.  "
+      echo "***** Are you sure you're in the right directory?"
+      echo ""
+      set exitstatus = -1
+    endif
+  endif
+
+  if ( $exitstatus == 0 && $requireMakefile ) then
+    echo ""
+    echo "-----------------------"
+    echo "Looking for a Makefile"
+    echo "----------------------"
+    echo ""
+
+    if ( $exitstatus == 0 ) then
+      if ( -f Makefile ) then
+        echo "Found: Makefile"
+      else if ( -f makefile ) then 
+        echo "Found: makefile"
+      else 
+        echo ""
+        echo "***** No Makefile found."
+        echo ""
+        set exitstatus = -2
+      endif
+    endif
+  endif
+
+  if ( $exitstatus == 0 ) then
+    echo ""
+    echo "--------------------------------"
+    echo "Checking for long lines (no program should have any lines > 80 chars)"
+    echo "(run ~pnico/bin/longlines.pl on your files to check.)"
+    echo "--------------------------------"
+    echo ""
+    if ( ! { $longlines $src } ) then
+       set exitstatus=-3
+    else
+       echo "Line length ok."
+    endif
+    echo ""
+  endif
+
+  if ( $exitstatus == 0 ) then
+    if ( -f Makefile ) then
+      echo "Found: Makefile"
+      set cmd = ( make $prog )
+    else 
+      set cmd = ( clang -pedantic -Wall -std=c99 -o $prog *c ) 
+    endif
+
+    echo ""
+    echo "------------------------------------"
+    echo "Building the application:" \"$cmd\"
+    echo "------------------------------------"
+    echo ""
+
+    echo "$cmd" 
+    if ( ! { $cmd } ) then
+      echo ""
+      echo "Unable to compile $prog."
+      set exitstatus = -4
+    endif
+  endif
+endif  # end not testonly section
+
+if ( $exitstatus == 0 ) then
+  echo ""
+  echo "---------------"
+  echo "checking for executable"
+  echo "---------------"
+  echo ""
+
+  if ( ! -x $prog ) then
+    echo "program $prog not found."
+    set exitstatus = -5
+  endif
+endif
+
+
+if ( $exitstatus == 0 ) then
+  echo ""
+  echo "------------------------"
+  echo "Running the application "
+  echo "------------------------"
+  echo ""
+
+  if ( -x $apptest ) then
+    $apptest
+    set exitstatus=$status
+  else 
+    echo $apptest not found.
+  endif
+endif
+
+  $logprog  $exitstatus "$whichones"
+
+  exit $exitstatus;
+
+bail:
+    set exitstatus=-7
+    echo ""
+    echo "Interrupted"
+    echo ""
+    goto endgame

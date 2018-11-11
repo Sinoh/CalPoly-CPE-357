@@ -1,0 +1,527 @@
+#!/bin/csh -f 
+
+set asgn=asgn4
+
+set force=0			# force recreation of reference items
+set checkabs=1			# check for absolute paths
+
+set dogeneraltests=1
+set docreationtests=1
+set dolistingtests=1
+set doextractiontests=1
+
+set abspath = 0
+
+set lib=/home/pn-cs357/lib/asgn4/
+set logprog=/home/pn-cs357/bin/logit.asgn4
+set longlines=/home/pn-cs357/bin/longlines.pl
+set cleanup = 1
+set testin  = Test.inputs.$$
+set testout = Test.outputs.$$
+set refmytar = /home/ngonella/public/csc-357/asgn4/mytar
+
+set here = $cwd
+set testdir=/home/ngonella/public/csc-357/asgn4/Tests/inputs
+set expdir=/home/ngonella/public/csc-357/asgn4/Tests/expected
+set datadir=/home/ngonella/public/csc-357/asgn4/Tests/data
+set exitstatus = 0
+onintr bail
+
+if ( -w $testdir ) then
+   # For my own protection.  I don't want my data files scribbled all over
+   echo "Not gonna do it.  Testdir is writable"
+   if ( `pwd` != "/home/pnico/CalPoly/Class/cpeX317/2010-04/Asgn/Handin/lib/asgn4/Testbed" )   exit 2
+endif
+
+set timeout=15
+set limitlines=100
+set limitchars=16384
+set diffout=diffsout.$$
+set detailsfile=diffs.$$
+
+set sfile=00script$$
+set outfile=00output$$
+set errfile=00errors$$
+set refout=r00eference$$
+set notesfile=00notes$$
+set outlist=00outlist$$
+set reflist=00reflist$$
+
+set fmt="%6d) %-45s... "
+
+if ( -f $detailsfile ) then
+  mv $detailsfile $detailsfile.old
+endif
+
+set usescript=1
+
+
+
+if ( $exitstatus == 0 ) then
+  echo ""
+  echo "-----------------Application tests-------------------------"
+  echo ""
+  echo "Test Results:"
+  echo "   These are the results of trying your mytar against a"   
+  echo "small battery of tests that explores"
+  echo ""
+  echo "   1) Basic functionality,"
+  echo "   2) Archive Creation,"
+  echo "   3) Archive Listing, and"
+  echo "   4) Archive Extraction."
+  echo ""
+  echo "  This is not remotely complete.  Some items will still"
+  echo "have to be checked by hand."
+  echo ""
+  echo "  This script looks for error messages to appear on stderr"
+  echo "as should be the case for all good unix applications."
+  echo "------------------------------------------------------------"
+  echo ""
+
+  # Create input/output locations
+  if ( -l $testin ) then
+    rm $testin
+  endif
+  ln -s $testdir $testin
+
+  # Initialize some counters
+  set tests=0
+  set pass=0
+
+echo "=============="
+if ( $dogeneraltests ) then
+  # now do some tests: first general skills
+  echo "  General Tests:"
+  foreach f ( $testdir/general/[0-9]*.cmd ) 
+    @ tests ++
+    
+    set cname=`grep CMD: $f | sed 's/.*://' | sed "s,DATADIR,$datadir,"`
+    set cfail=`grep FAIL: $f | sed 's/.*://'`
+    set cdesc=`grep NAME: $f | sed 's/.*://'`
+
+    printf "$fmt" $tests "$cdesc"
+    set cmd = "$cname > $outfile 2> $errfile"
+
+    set debug=0
+    if ( $debug ) then
+       echo "cname: "\"$cname\"
+       echo "cfail: "\"$cfail\"
+       echo "cdesc: "\"$cdesc\"
+       echo "  cmd: "\"$cmd\"
+    endif
+
+    (setenv SHELL /bin/sh;  \
+	    script -q -c "timelimit $timeout $cmd" $sfile) >& /dev/null
+  	   # append console output (from script) to errfile..
+    tail -n +2 $sfile | tr -d '\r' >> $errfile
+
+     set outcome="Unknown (what happened?)"
+     if ( "$cfail" != "" ) then
+        if ( -z $errfile || \
+            { egrep -iq \
+	     '(segmentation violation|glibc detected|Cannot allocate memory)'\
+	     $errfile } )\
+	    then
+	  set outcome = "FAILURE"
+	else
+	  set outcome = "(probably) ok"
+	  @ pass++
+	endif
+     else 
+        if ( -z $errfile ) then
+	  set outcome = "(probably) ok"
+	  @ pass++
+	else
+	  set outcome = "FAILURE"
+	endif
+     endif
+     echo "$outcome."
+
+     # output the details for posterity
+     
+     echo "" >> $detailsfile
+     echo "==========================================" >> $detailsfile
+     echo "$tests) General test: $cdesc  ($outcome)"            >> $detailsfile
+     echo "==========================================" >> $detailsfile
+     
+     echo "  --------------------------" >> $detailsfile
+     echo "  Submitted's stdout:" >> $detailsfile
+     cat -v $outfile | sed 's/^/    /g' >> $detailsfile
+     echo "  --------------------------" >> $detailsfile
+     echo "  --------------------------" >> $detailsfile
+     echo "  Submitted's stderr:" >> $detailsfile
+     cat -v $errfile | sed 's/^/    /g' >> $detailsfile
+     echo "  --------------------------" >> $detailsfile
+
+     # clean up for next time
+     rm -f $outfile $errfile $sfile $refout $outlist $reflist
+  end
+  set generalpass  = $pass
+  set generaltests = $tests
+endif
+    
+
+####################################################3333
+if ( $docreationtests ) then
+  echo "  Creation Tests:"
+  foreach f ( $testdir/creation/[0-9]*.cmd ) 
+     @ tests++
+
+     set cargs=`grep ARGS: $f | sed 's/.*://'`
+     set cflag=`grep FLAGS: $f | sed 's/.*://'`
+     set cdesc=`grep NAME: $f | sed 's/.*://'`
+     set where=`grep WHERE: $f | sed 's/.*://' | sed "s,DATADIR,$datadir,"`
+
+     set debug = 0
+     if ( $debug ) then
+       echo "cargs: "\"$cargs\"
+       echo "where: "\"$where\"
+       echo "cdesc: "\"$cdesc\"
+     endif
+
+     printf "$fmt" $tests "$cdesc"
+
+     set archive=$here/archive$$.tar
+     set refarchive=$expdir/creation/$f:t:h.tar
+     if ( ! -f $refarchive || $force ) then
+       (cd $where; $refmytar $cflag $refarchive $cargs)
+     endif
+
+     # run it
+     set cmd = "$here/mytar $cflag $archive $cargs > $here/$outfile 2> $here/$errfile"
+
+     (setenv SHELL /bin/sh; cd $where; \
+	    script -q -c "timelimit $timeout $cmd" $here/$sfile) >& /dev/null
+  	   # append console output (from script) to errfile..
+     tail -n +2 $here/$sfile | tr -d '\r' >> $errfile
+    
+     # now check to see if we got a good archive
+     set err = 0
+
+     # prefirst: existance
+     set outcome="Unknown (what happened?)"
+     if ( ! -f $archive ) then
+	echo "*** Archive file not found" >> $notesfile
+	@ err++
+        set outcome = "FAILURE"
+     else if ( -Z $archive != -Z $refarchive ) then
+        set ssize=`cat $archive | wc -c `
+        set rsize=`cat $refarchive | wc -c `
+	echo "*** Archive size mismatch:" >> $notesfile
+	echo "      Submitted: $ssize" >> $notesfile
+	echo "      Reference: $rsize" >> $notesfile
+	@ err++
+        set outcome = "FAILURE"
+     else 
+        tar tvf $refarchive |& sort > $reflist
+        tar tvf $archive |& sort >& $outlist
+	# (aside) check for absolute paths
+	if ( $checkabs && { ( egrep -q ' /' $outlist >& /dev/null ) } ) then
+	    set abspath=1
+	endif
+
+	# compare the lists
+	if ( ! { ( diff -q -wBbi $reflist $outlist >& /dev/null ) } ) then
+          # They are different
+	  set outcome = "FAILURE"
+	  @ err++
+	else 
+	  set outcome = "ok"
+	  @ pass++
+	endif
+     endif
+     echo "$outcome."
+
+     echo "" >> $detailsfile
+     echo "==========================================" >> $detailsfile
+     echo "$tests) Creation test: $cdesc  ($outcome)"            >> $detailsfile
+     echo "==========================================" >> $detailsfile
+
+     if ( -f $notesfile ) then
+       cat $notesfile >> $detailsfile
+     endif
+     
+     if ( -f $outfile && ! -z $outfile ) then
+     	 echo "  --------------------------" >> $detailsfile
+     	 echo "  Submitted's stdout:" >> $detailsfile
+     	 cat -v $outfile | sed 's/^/    /g' >> $detailsfile
+     	 echo "  --------------------------" >> $detailsfile
+     endif
+
+     if ( -f $errfile && ! -z $errfile ) then
+     	 echo "  --------------------------" >> $detailsfile
+     	 echo "  Submitted's stderr:" >> $detailsfile
+     	 cat -v $errfile | sed 's/^/    /g' >> $detailsfile
+     	 echo "  --------------------------" >> $detailsfile
+     endif
+
+     if ( -f $outlist ) then
+     	 echo "  --------------------------" >> $detailsfile
+     	 echo "  Submitted's archive listing(sorted):" >> $detailsfile
+     	 cat -v $outlist | sed 's/^/    /g' >> $detailsfile
+     	 echo "  --------------------------" >> $detailsfile
+     	 if ( -f $refout ) then
+     	 	 echo "  --------------------------" >> $detailsfile
+     	 	 echo "  Reference archive listing(sorted):" >> $detailsfile
+     	 	 cat -v $reflist | sed 's/^/    /g' >> $detailsfile
+     	 	 echo "  --------------------------" >> $detailsfile
+     	 endif
+     else
+     	 echo "  --------------------------" >> $detailsfile
+     	 echo "  No listing for submitted's archive." >> $detailsfile
+     	 echo "  --------------------------" >> $detailsfile
+     endif
+
+     # clean up for next time
+     rm -f $outfile $errfile $sfile $refout $notesfile $outlist $reflist
+     rm -f $archive
+  end
+endif  
+
+####################################################3333
+if ( $dolistingtests ) then
+  echo "  Listing Tests:"
+  foreach f ( $testdir/listing/[0-9]*.cmd ) 
+     @ tests++
+
+     set cargs=`grep ARGS: $f | sed 's/.*://'`
+     set cflag=`grep FLAGS: $f | sed 's/.*://'`
+     set cdesc=`grep NAME: $f | sed 's/.*://'`
+     set where=`grep WHERE: $f | sed 's/.*://' | sed "s,DATADIR,$datadir,"`
+
+     set debug = 0
+     if ( $debug ) then
+       echo "cargs: "\"$cargs\"
+       echo "where: "\"$where\"
+       echo "cdesc: "\"$cdesc\"
+     endif
+
+     printf "$fmt" $tests "$cdesc"
+
+     set reflist=$expdir/listing/$f:t:h.list
+     if ( ! -f $reflist || $force ) then
+       ((cd $where; $refmytar $cflag $cargs) > $reflist ) >& /dev/null
+#       ((cd $where; tar $cflag $cargs) > $reflist ) >& /dev/null
+     endif
+
+     # run it
+     set cmd = "$here/mytar $cflag $cargs > $here/$outfile 2> $here/$errfile"
+
+     (setenv SHELL /bin/sh; cd $where; \
+	    script -q -c "timelimit $timeout $cmd" $here/$sfile) >& /dev/null
+  	   # append console output (from script) to errfile..
+     tail -n +2 $here/$sfile | tr -d '\r' >> $errfile
+   
+     # now check to see if we got a good listing
+     set err = 0
+
+     # prefirst: existance
+     set outcome="Unknown (what happened?)"
+     if ( ! { ( diff -wBb $outfile $reflist >& $diffout ) } ) then
+        # the listings differ
+	@ err++
+        set outcome = "FAILURE"
+     else
+        # they're the same
+        set outcome = "ok"
+	@ pass++
+     endif
+     echo "$outcome."
+
+     echo "" >> $detailsfile
+     echo "==========================================" >> $detailsfile
+     echo "$tests) Listing test: $cdesc  ($outcome)"            >> $detailsfile
+     echo "==========================================" >> $detailsfile
+
+     if ( -f $notesfile ) then
+       cat $notesfile >> $detailsfile
+     endif
+     
+     if ( -f $outfile ) then
+     	 echo "  --------------------------" >> $detailsfile
+     	 echo "  Submitted's stdout:" >> $detailsfile
+     	 cat -v $outfile | sed 's/^/    /g' >> $detailsfile
+     	 echo "  --------------------------" >> $detailsfile
+     endif
+
+     if ( -f $errfile ) then
+     	 echo "  --------------------------" >> $detailsfile
+     	 echo "  Submitted's stderr:" >> $detailsfile
+     	 cat -v $errfile | sed 's/^/    /g' >> $detailsfile
+     	 echo "  --------------------------" >> $detailsfile
+     endif
+
+     if ( $err ) then
+     	 echo "  --------------------------" >> $detailsfile
+     	 echo "  Differences ( < Submitted's > Reference):" >> $detailsfile
+	 cat -v $diffout | sed 's/^/    /' | cat -v >>  $detailsfile
+     	 echo "  --------------------------" >> $detailsfile
+     endif
+
+     # clean up for next time
+     rm -f $outfile $errfile $diffout $sfile $refout $outlist
+  end
+endif
+####################################################3333
+if ( $doextractiontests ) then
+  echo "  Extraction Tests:"
+  if ( -e $testout ) then
+     echo "$testout exists.  Bailing."
+     @ exitstatus ++
+     goto done
+  endif
+
+  foreach f ( $testdir/extraction/[0-9]*.cmd ) 
+     # create the output directories
+     mkdir $testout
+     mkdir $testout/Reference
+     mkdir $testout/Submitted
+
+     @ tests++
+     set err = 0
+
+     set cdesc=`grep NAME: $f | sed 's/.*://'`
+     set cargs=`grep ARGS: $f | sed 's/.*://' | sed "s,DATADIR,$datadir,"`
+
+     set debug = 0
+     if ( $debug ) then
+       echo "cargs: "\"$cargs\"
+       echo "cdesc: "\"$cdesc\"
+     endif
+
+     printf "$fmt" $tests "$cdesc"
+
+     # extract the archive twice, once w/tar, once with submitted
+     # reference
+     (cd $testout/Reference; $refmytar $cargs) >& /dev/null
+
+     # submitted
+     set cmd = "$here/mytar $cargs > $here/$outfile 2> $here/$errfile"
+     (setenv SHELL /bin/sh; cd $testout/Submitted; \
+	    script -q -c "timelimit $timeout $cmd" $here/$sfile) >& /dev/null
+  	   # append console output (from script) to errfile..
+     tail -n +2 $here/$sfile | tr -d '\r' >> $errfile
+
+     # diff the results
+     if ( ! { ( diff -qr $testout/Submitted $testout/Reference >& $diffout ) } ) then
+        # the listings differ
+	@ err++
+        set outcome = "FAILURE"
+     else
+        # they're the same
+        set outcome = "ok"
+	@ pass++
+     endif
+     echo "$outcome."
+     
+     #record the results for posterity     
+     echo "" >> $detailsfile
+     echo "==========================================" >> $detailsfile
+     echo "$tests) Extraction test: $cdesc  ($outcome)">> $detailsfile
+     echo "==========================================" >> $detailsfile
+
+     if ( -f $notesfile ) then
+       cat $notesfile >> $detailsfile
+     endif
+     
+     if ( -f $outfile && ! -z $outfile ) then
+     	 echo "  --------------------------" >> $detailsfile
+     	 echo "  Submitted's stdout:" >> $detailsfile
+     	 cat -v $outfile | sed 's/^/    /g' >> $detailsfile
+     	 echo "  --------------------------" >> $detailsfile
+     endif
+
+     if ( -f $errfile && ! -z $errfile ) then
+     	 echo "  --------------------------" >> $detailsfile
+     	 echo "  Submitted's stderr:" >> $detailsfile
+     	 cat -v $errfile | sed 's/^/    /g' >> $detailsfile
+     	 echo "  --------------------------" >> $detailsfile
+     endif
+
+     if ( $err ) then
+     	 echo "  --------------------------" >> $detailsfile
+     	 echo "  Differences ( < Submitted's > Reference):" >> $detailsfile
+	 cat -v $diffout | sed 's/^/    /' | cat -v >>  $detailsfile
+     	 echo "  --------------------------" >> $detailsfile
+     endif
+
+    
+    rm -f $outfile $errfile $diffout $sfile 
+    rm -rf $testout
+  end
+endif
+
+
+echo "=============="
+echo "Passed $pass out of $tests tests."
+echo ""
+
+if ( $?generaltests ) then
+    echo \($generalpass out of $generaltests general/usage tests.\)
+	echo ""
+endif
+
+if ( $pass != $tests ) then
+    @ exitstatus = $tests - $pass;
+endif
+
+
+
+# check for corefiles
+set cores = `ls | egrep '^core(\.[0-9]+)?$'`
+if ( $#cores ) then
+   echo ""
+   echo "----------------------------"
+   if ( $#cores == 1 ) then
+     echo $#cores" Corefile Present:"
+   else
+     echo $#cores" Corefiles Present:"
+   endif
+   foreach f ( $cores ) 
+     echo "    $f"
+   end
+   echo "----------------------------"
+   echo ""
+endif
+
+if ( $abspath ) then
+  echo ""
+  echo "*** mytar appears to be including absolute paths."
+  echo "    (None of these tests do that.)"
+  echo ""
+endif
+
+if ( -f $detailsfile ) then
+  echo "##########################"
+  echo "# Test details are below #"
+  echo "##########################"
+  echo ""
+  cat $detailsfile 
+  rm -f $detailsfile
+endif
+
+goto done
+
+bail:
+  echo "Interrupted."
+  rm -f output$$ errors$$ script$$ middle$$ refout
+  rm -f $sfile $outfile $errfile $refout $notesfile
+  set exitstatus=-7
+  
+
+done:
+
+if ( $cleanup ) then
+   rm -rf $here/$testin
+   rm -rf $here/$testout
+endif
+
+exit $exitstatus
+
+#
+#
+#
+#
+#
+#
+#
