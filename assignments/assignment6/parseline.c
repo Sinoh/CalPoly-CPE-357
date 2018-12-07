@@ -170,42 +170,6 @@ int check_command_line(char *command_line) {
   return 0;
 }
 
-/* Call to print the attributes of the struct Command */
-/* Print each attribute in the correct format */
-void print_command(struct Command *cmd, int stage_number) {
-  int i;
-
-  /* Prints the dashes and the the stage number*/
-  /* Also prints the appropriate command_line */
-  printf("\n--------\n");
-  if (stage_number == 0) {
-    printf("Stage %i: \"%s\"\n", stage_number, cmd->command_line);
-  } else {
-
-    /* Correctly prints the command_line with a space before the command */
-    printf("Stage %i: \" %s\"\n", stage_number, cmd->command_line);
-  }
-  printf("--------\n");
-
-  /* Prints the input, output, argument count, and arguments */
-  printf("%10s: %s\n", "input", cmd->input);
-  printf("%10s: %s\n", "output", cmd->output);
-  printf("%10s: %i\n", "argc", cmd->argc);
-  printf("%10s:", "argv");
-  for (i = 0; i < cmd->argc; i++) {
-    if (i == 0) {
-      printf(" \"%s\"", cmd->argv[i]);
-    } else {
-      printf(",\"%s\"", cmd->argv[i]);
-    }
-  }
-  printf("\n");
-  if (cmd->next_command != NULL) {
-    print_command(cmd->next_command, stage_number + 1);
-  }
-  
-}
-
 /* Creates a struct Command to be printed to stdout */
 int parse_line(char *command_line, struct Command *cmd, int stage_number) {
   char *token;
@@ -224,7 +188,7 @@ int parse_line(char *command_line, struct Command *cmd, int stage_number) {
   strcpy(cmd_temp_two, command_line);
 
   /* Initialized output as the default stdout */
-  strcpy(cmd->output, "original stdout");
+  strcpy(cmd->output, "stdout");
 
   /* Check if the first argument is a input or output */
   /* Set the respective flag if either input or output is found */
@@ -264,6 +228,9 @@ int parse_line(char *command_line, struct Command *cmd, int stage_number) {
   token = strtok(command_line, " ");
 
   /* This argument will be the command and increase argc */
+  if (token[strlen(token) - 1] == '\n') {
+    token[strlen(token) - 1] = '\0';
+  }
   strcpy(cmd->argv[cmd->argc], token);
   cmd->argc++;
 
@@ -308,11 +275,9 @@ int parse_line(char *command_line, struct Command *cmd, int stage_number) {
 
       /* Reset argc for the next pipe */
       next_cmd->argc = 0;
-      for (i = 0; i < MAX_CMD_LENGTH; i++) {
-        next_cmd->argv[i] = malloc(MAX_CMD_LENGTH * ONE_BYTE);
+      for (i = 0; i < PIPE_LIMIT; i++) {
+        next_cmd->argv[i] = malloc(MAX_CMD_LENGTH);
       }
-
-
 
       /* From this current pipe to the rest of the line */
       /* Is considered the new command_line */
@@ -325,35 +290,39 @@ int parse_line(char *command_line, struct Command *cmd, int stage_number) {
     } else {
 
       /* If an arugment, save ins argv and increase argc */
+      if (token[strlen(token) - 1] == '\n') {
+        token[strlen(token) - 1] = '\0';
+      }
       strcpy(cmd->argv[cmd->argc], token);
       cmd->argc++;
     }
   }
 
   /* If the end is reached, print the final piece of the command_line */
+  cmd->argv[cmd->argc] = NULL;
 
   return 1;
 }
 
-struct Command *parseline(char *command_line) {
+int parseline(char *command_line, struct Command *cmd) {
   int i;
-  struct Command *cmd = (struct Command *)calloc(1, sizeof(struct Command));
+  
 
   /* Check the command_line for errors */
   check_command_line(command_line);
 
   /* Initilize the first struct */
   strcpy(cmd->command_line, command_line);
-  strcpy(cmd->input, "original stdin");
-  strcpy(cmd->output, "original stdout");
+  strcpy(cmd->input, "stdin");
+  strcpy(cmd->output, "stdout");
   cmd->argc = 0;
-  for (i = 0; i < MAX_CMD_LENGTH; i++) {
+  
+  for (i = 0; i < PIPE_LIMIT; i++) {
     cmd->argv[i] = malloc(MAX_CMD_LENGTH * ONE_BYTE);
   }
 
   /* Parse Line */
   parse_line(command_line, cmd, 0);
-  print_command(cmd, 0);
-  return cmd;
+  return 0;
 }
 
