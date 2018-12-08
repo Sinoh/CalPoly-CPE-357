@@ -1,8 +1,13 @@
-//#define _BSD_SOURCE
-//#define _GNU_SOURCE
+#define _BSD_SOURCE
+#define _GNU_SOURCE
+#define _DEFAULT_SOURCE 1
 
 #ifndef _UNISTD_H
 #include <unistd.h>
+#endif
+
+#ifndef _FCNTL_H
+#include <fcntl.h>
 #endif
 
 #ifndef _STDIO_H
@@ -23,6 +28,10 @@
 
 #ifndef _SYS_TYPES_H
 #include <sys/types.h>
+#endif
+
+#ifndef _SYS_STAT_H
+#include <sys/stat.h>
 #endif
 
 #ifndef _SYS_WAIT_H
@@ -49,8 +58,6 @@ struct Command {
     
 };
 
-int check_command_line(char *command_line);
-int parse_line(char *command_line, struct Command *cmd, int stage_number);
-int parseline(char *command_line, struct Command *cmd);
+int parseline(char *command_line);
 
 #endif
