@@ -1,0 +1,8 @@
+Name: Jeffery Ho (jho74@calpoly.edu) & 
+         Adrian Castelan Pichardo (acaste10@calpolyedu)
+Special Instructions: None
+Other:
+   - Limits:
+      ~ Command line length: at most 512 bytes
+      ~ Commands in a pipeline: at most 10
+      ~ Arguments to a command: at most 10

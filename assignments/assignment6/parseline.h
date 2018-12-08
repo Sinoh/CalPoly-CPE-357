@@ -58,6 +58,8 @@ struct Command {
     
 };
 
+void free_cmd_struct(struct Command *cmd);
+int parse_line(char *command_line, struct Command *cmd, int stage_number);
 int parseline(char *command_line);
 
 #endif

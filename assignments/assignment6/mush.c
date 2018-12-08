@@ -13,11 +13,12 @@ void interrupt_handler() {
 
 int main(int argc, char **argv) {
   char command_line[MAX_CMD_LENGTH];
-  char *token = NULL;
-  char cpy[MAX_CMD_LENGTH];
+  char command_line_backup[MAX_CMD_LENGTH];
   struct sigaction int_act;
   FILE *fp;
   size_t new_len;
+  int i;
+  
 
   int_act.sa_handler = interrupt_handler;
   sigaction(SIGINT, &int_act, NULL);
@@ -30,16 +31,10 @@ int main(int argc, char **argv) {
         fputs("Error reading file", stderr);
       } else {
         command_line[new_len++] = '\0';
-        if ((strlen(command_line) > 0) &&
-            (command_line[strlen(command_line) - 1] == '\n')) {
-          command_line[strlen(command_line) - 1] = '\0';
-        } else {
-          fprintf(stderr, "command too long\n");
-          exit(1);
-        }
 
       parseline(command_line);
       fclose(fp);
+      }
     }
   } else {
     while (1) {
@@ -52,6 +47,7 @@ int main(int argc, char **argv) {
         fprintf(stderr, "\n");
         continue;
       }
+      /* Removes newline '\n' if present */
       if ((strlen(command_line) > 0) &&
           (command_line[strlen(command_line) - 1] == '\n')) {
         command_line[strlen(command_line) - 1] = '\0';
@@ -64,18 +60,33 @@ int main(int argc, char **argv) {
       }
       /* Check if the command passed is cd */
       if (strstr(command_line, "cd") != NULL) {
-        strcpy(cpy, command_line);
-        token = strtok(cpy, " ");
+        struct Command *cmd = (struct Command *)calloc(1, sizeof(struct Command));
+        strcpy(cmd->command_line, command_line);
+        strcpy(cmd->input, "original stdin");
+        strcpy(cmd->output, "original stdout");
+        cmd->argc = 0;
+        for (i = 0; i < PIPE_LIMIT; i++) {
+          cmd->argv[i] = calloc(1, MAX_CMD_LENGTH);
+        }
+        
+        strcpy(command_line_backup, command_line);
+        parse_line(command_line_backup, cmd, 0);
 
-        /* check if cd is missing an argument */
-        if ((token = strtok(NULL, " ")) == NULL) {
-          fprintf(stderr, "cd: missing argument.\n");
+        /* if cd is missing an argument */
+        if (cmd->argc == 1) {
+          fprintf(stderr, "cd: missing arguments.\n");
           continue;
         }
+        if (cmd->argc > 2) {
+          fprintf(stderr, "cd: too many argument.\n");
+          continue;
+        }
+
         /* Need to check if "too many arguments.\n" is passed */
-        if (chdir(token) != 0) {
+        if (chdir(cmd->argv[1]) != 0) {
           perror("cd");
         }
+        free_cmd_struct(cmd);
         continue;
       }
       parseline(command_line);
