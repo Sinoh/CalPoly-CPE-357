@@ -1,9 +1,0 @@
-{
-    "files.associations": {
-        "ustararchive.h": "c",
-        "stdio.h": "c",
-        "createarchive.h": "c",
-        "mytar.h": "c",
-        "printarchive.h": "c"
-    }
-}
